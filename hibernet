@@ -372,3 +372,183 @@ Add this in repsoitory layer
 ############################
 
 
+## 🔍 JPQL vs Native SQL in Hibernate (Spring Boot)
+
+Here’s a clear breakdown of how they differ:
+
+| Feature              | JPQL (Java Persistence Query Language)             | Native SQL (Raw SQL)                          |
+|----------------------|----------------------------------------------------|------------------------------------------------|
+| **Target**           | Works with **Java entities** and their fields      | Works with **database tables** and columns     |
+| **Portability**      | **Database-independent**                           | **Database-specific**                          |
+| **Syntax**           | Similar to SQL but uses entity names               | Standard SQL syntax                            |
+| **Use Case**         | Ideal for most CRUD and object-based queries       | Needed for complex joins, stored procedures    |
+| **Annotation**       | `@Query("SELECT e FROM Employee e")`               | `@Query(value = "SELECT * FROM employees", nativeQuery = true)` |
+| **Return Type**      | Returns entity objects                             | Can return entities or raw data (Object[])     |
+| **Limitations**      | Limited to JPA features                            | Full control over SQL features                 |
+
+Sources: 
+
+---
+
+## 🧠 Real-World Analogy
+
+Imagine you’re querying a library:
+- **JPQL**: You ask for books by referencing their **Java class** (`Book`) and fields (`title`, `author`).
+- **Native SQL**: You ask for books by referencing the **actual database table** (`books`) and columns (`book_title`, `book_author`).
+
+---
+
+## ✅ When to Use What?
+
+### Use **JPQL** when:
+- You want portability across databases.
+- You’re working with entity relationships (`@OneToMany`, `@ManyToOne`).
+- You prefer object-oriented queries.
+
+### Use **Native SQL** when:
+- You need advanced SQL features (e.g., window functions, stored procedures).
+- You’re optimizing performance with database-specific syntax.
+- You’re querying non-entity tables or views.
+
+---
+
+
+## 🔄 `fetch = FetchType.EAGER`
+
+**EAGER fetching** means:  
+➡️ When you load an entity, **all its related entities are loaded immediately**, even if you don’t need them.
+
+### 🧠 Analogy:
+Imagine ordering a pizza and automatically getting fries, drinks, and dessert — even if you just wanted the pizza.
+
+### 🧪 Example:
+```java
+@OneToMany(fetch = FetchType.EAGER)
+private List<OrderItem> items;
+```
+- When you load an `Order`, Hibernate also loads all `OrderItems` right away.
+
+### ⚠️ Downsides:
+- Can cause **performance issues** (N+1 problem).
+- Loads unnecessary data.
+
+---
+
+## 💤 `fetch = FetchType.LAZY`
+
+**LAZY fetching** means:  
+➡️ Related entities are **loaded only when accessed**, not when the parent is loaded.
+
+### 🧠 Analogy:
+You order a pizza, and you’ll get fries only if you ask for them later.
+
+### 🧪 Example:
+```java
+@OneToMany(fetch = FetchType.LAZY)
+private List<OrderItem> items;
+```
+- Hibernate loads `OrderItems` only when you call `order.getItems()`.
+
+### ✅ Benefits:
+- **Better performance**.
+- Loads only what you need.
+
+### ⚠️ Gotcha:
+- If accessed outside of a transaction (e.g., in a controller), you may get a `LazyInitializationException`.
+
+---
+
+## 🔁 `cascade = CascadeType.ALL`
+
+**Cascade** means:  
+➡️ Operations on the parent entity are **automatically applied to its child entities**.
+
+### 🧠 Analogy:
+If you delete a folder, all files inside it are deleted too — you don’t need to delete each file manually.
+
+### 🧪 Example:
+```java
+@OneToMany(cascade = CascadeType.ALL)
+private List<OrderItem> items;
+```
+- If you `save()` or `delete()` an `Order`, Hibernate will also `save()` or `delete()` its `OrderItems`.
+
+### 🔧 Common Cascade Types:
+- `PERSIST`: Save child when parent is saved.
+- `MERGE`: Update child when parent is updated.
+- `REMOVE`: Delete child when parent is deleted.
+- `ALL`: Applies all of the above.
+
+---
+
+## 🧩 Summary Table
+
+| Feature        | EAGER                     | LAZY                      | CascadeType.ALL               |
+|----------------|---------------------------|---------------------------|-------------------------------|
+| Load Timing    | Immediate                 | On-demand                 | Applies all operations        |
+| Performance    | Heavy                     | Efficient                 | Depends on use case           |
+| Risk           | Over-fetching             | LazyInitializationException | Unintended cascading          |
+| Use Case       | Small, always-needed data | Large or optional data    | Parent-child lifecycle sync   |
+
+---
+
+
+## 🔍 What is `@Transactional`?
+
+It marks a method (or class) as **transactional**, meaning:
+- All database operations inside it are treated as a **single unit of work**.
+- If any exception occurs, the entire transaction is **rolled back**.
+- If everything succeeds, the transaction is **committed**.
+
+---
+
+## 🧠 Real-World Analogy
+
+Imagine transferring money between two bank accounts:
+- You **withdraw** from Account A
+- You **deposit** into Account B
+
+If the deposit fails, you don’t want the withdrawal to go through. You want **both steps to succeed or fail together** — that’s a transaction.
+
+---
+
+## 🧰 How It Works in Hibernate
+
+Hibernate uses transactions to manage session operations like `save()`, `update()`, and `delete()`. In Spring Boot, you typically annotate service methods:
+
+```java
+@Service
+public class OrderService {
+
+    @Transactional
+    public void placeOrder(Order order) {
+        orderRepository.save(order);
+        paymentService.charge(order);
+        inventoryService.updateStock(order);
+    }
+}
+```
+
+- If `charge()` or `updateStock()` fails, the entire `placeOrder()` method rolls back.
+- Spring handles the transaction boundaries using AOP (Aspect-Oriented Programming).
+
+---
+
+## ✅ Benefits of `@Transactional`
+
+- **Atomicity**: All-or-nothing execution.
+- **Consistency**: Keeps your data valid.
+- **Isolation**: Prevents dirty reads and race conditions.
+- **Durability**: Changes persist once committed.
+
+---
+
+## ⚠️ Common Pitfalls
+
+- Works only on **public methods**.
+- Must be called from **outside the class** (proxy-based).
+- Lazy loading outside transaction scope can cause `LazyInitializationException`.
+
+---
+
+
