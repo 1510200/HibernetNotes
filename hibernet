@@ -1,0 +1,374 @@
+#######################
+Hibernate
+#######################
+
+-> Hibernate is an ORM (Object relation mapping) tool
+-> It helps developers map Java classes to database tables and automate CRUD operations (Create, Read, Update, Delete) without writing complex SQL queries.
+
+1. @Entity - “This annotaion maps Java class to a table in the database.”
+2. @Id   - Indicates the primary key column, and is mandatory to define inside entity class
+---
+🧩 What is JPA?
+
+**JPA (Java Persistence API)** is a *specification*, not a tool or library. Think of it as a blueprint or contract that defines:
+
+- **What** operations should be possible for object-relational mapping (ORM)
+- **How** entities should be annotated
+- **What** interfaces should exist for querying and managing data
+
+### Key traits:
+- It’s part of the **Jakarta EE** (formerly Java EE) ecosystem.
+- It defines annotations like `@Entity`, `@Id`, `@OneToMany`, etc.
+- It provides interfaces like `EntityManager`, `Query`, and `PersistenceContext`.
+
+But JPA **does not contain any actual implementation** — it doesn’t persist anything by itself.
+
+---
+
+⚙️ What is Hibernate?
+
+**Hibernate** is a *concrete implementation* of the JPA specification — and it goes beyond it.
+
+### Hibernate does two things:
+1. **Implements JPA**: It provides the actual code that makes JPA annotations and interfaces work.
+2. **Adds extra features**: Hibernate has its own powerful APIs and configurations that go beyond JPA, such as:
+   - Hibernate Query Language (HQL)
+   - Caching strategies
+   - Custom naming strategies
+   - Advanced fetching and lazy loading options
+
+---
+
+## 🔍 Analogy: JPA vs Hibernate
+
+| Concept        | JPA (Specification)         | Hibernate (Implementation)       |
+|----------------|-----------------------------|----------------------------------|
+| Role           | Defines *what to do*        | Defines *how to do it*           |
+| Type           | Interface + annotations     | Full-fledged library             |
+| Examples       | `@Entity`, `EntityManager`  | `SessionFactory`, HQL, caching   |
+| Flexibility    | Vendor-neutral              | Hibernate-specific features      |
+
+---
+
+🧠 Why use JPA at all?
+
+- **Portability**: You can switch between providers (e.g., Hibernate → EclipseLink) with minimal code changes.
+- **Standardization**: JPA gives a consistent way to define entities and queries.
+- **Abstraction**: It decouples your app from the underlying ORM engine.
+---
+## 🧱 1. **Entity Mapping (Class-to-Table)**  
+**Analogy**: Imagine a spreadsheet named “Employees.” Each row is a person, and each column is a detail like name, age, or department.  
+**Hibernate’s job**: It maps your Java class `Employee` to this spreadsheet so each object becomes a row in the table.
+---
+## 👥 2. **One-to-One Mapping**  
+**Real-world example**: A person and their passport.  
+- One person has exactly one passport.  
+- One passport belongs to exactly one person.
+
+**Hibernate’s job**: It links the `Person` object to the `Passport` object so when you fetch a person, you can also get their passport.
+---
+## 🧑‍🤝‍🧑 3. **One-to-Many Mapping**  
+**Real-world example**: A manager and their team.  
+- One manager oversees many employees.  
+- Each employee reports to one manager.
+
+**Hibernate’s job**: It connects the `Manager` object to a list of `Employee` objects. You can ask, “Who works under this manager?” and get the full list.
+
+---
+
+## 🔁 4. **Many-to-One Mapping**  
+**Real-world example**: Many books belong to one library.  
+- Each book is stored in one library.  
+- The library holds many books.
+
+**Hibernate’s job**: It allows each `Book` object to reference its `Library`, so you know where it belongs.
+
+---
+
+## 🔄 5. **Many-to-Many Mapping**  
+**Real-world example**: Students and courses.  
+- A student can enroll in multiple courses.  
+- A course can have multiple students.
+
+**Hibernate’s job**: It creates a bridge table (like a sign-up sheet) that links students to courses and vice versa.
+
+---
+
+## 🧺 6. **Embedded Mapping**  
+**Real-world example**: A customer and their address.  
+- The address isn’t a separate entity — it’s part of the customer’s profile.
+
+**Hibernate’s job**: It embeds the address fields directly into the customer’s database row, like adding extra columns for city, state, and zip code.
+
+---
+
+## 🧬 7. **Inheritance Mapping**  
+**Real-world example**: Vehicles — cars, bikes, and trucks all share common traits like speed and fuel type, but each has unique features.  
+- You might store all vehicles in one table (single table strategy), or split them into separate tables (joined strategy).
+
+**Hibernate’s job**: It helps you model this hierarchy so you can treat all vehicles similarly while preserving their differences.
+
+---
+
+## 🧠 What is Normalization?
+
+**Normalization** is a database design technique that:
+- Eliminates redundant data
+- Ensures data integrity
+- Organizes data into logical, related tables
+
+It follows **normal forms** (1NF, 2NF, 3NF, etc.) to reduce anomalies during insert, update, or delete operations.
+
+---
+
+## 🧩 How Normalization Relates to Hibernate
+
+Hibernate is an ORM (Object-Relational Mapping) tool. It maps Java classes to database tables. When you design your entity classes, **you should reflect normalized database design**. Here's how:
+
+### 🔹 1NF (First Normal Form)
+- **Rule**: No repeating groups or arrays in a single column.
+- **Hibernate**: Use separate fields or related entities instead of storing comma-separated values.
+
+**Example**: Instead of storing multiple phone numbers in one column, create a `PhoneNumber` entity and use a `@OneToMany` relationship.
+
+---
+
+### 🔹 2NF (Second Normal Form)
+- **Rule**: No partial dependency on a composite key.
+- **Hibernate**: Avoid embedding unrelated fields in entities that depend only on part of a composite key.
+
+**Example**: If `OrderDetail` has a composite key (`orderId`, `productId`), don’t store customer name there — it belongs in `Order`.
+
+---
+
+### 🔹 3NF (Third Normal Form)
+- **Rule**: No transitive dependencies (non-key fields depending on other non-key fields).
+- **Hibernate**: Break out entities like `Address`, `Department`, or `Category` into separate tables and use `@ManyToOne` or `@OneToOne`.
+
+**Example**: Don’t store `departmentName` in `Employee` if it can be derived from a `Department` entity.
+
+---
+
+## 🧰 Hibernate’s Role
+
+Hibernate doesn’t enforce normalization, but it:
+- **Supports normalized design** via entity relationships (`@OneToMany`, `@ManyToOne`, etc.)
+- **Maps normalized tables** to object graphs
+- **Handles joins and cascades** so you don’t have to write complex SQL
+
+---
+
+ 🚀 What Spring Data JPA Actually Does
+
+Spring Data JPA builds on top of the **Java Persistence API (JPA)** and integrates it seamlessly into the **Spring ecosystem**. It provides a high-level abstraction for working with relational databases using **Object-Relational Mapping (ORM)**.
+
+### 🔧 Key Features:
+- **Auto-generated CRUD operations**: Just extend `JpaRepository`, and you get `save()`, `findById()`, `delete()`, etc., for free.
+- **Derived query methods**: Write methods like `findByEmail()` or `findByAgeGreaterThan()` — Spring generates the SQL.
+- **Pagination and sorting**: Built-in support via `Pageable` and `Sort`.
+- **Custom queries**: Use JPQL or native SQL with `@Query`.
+- **Auditing and lifecycle hooks**: Track who created or modified entities.
+- **Works with any JPA provider**: Most commonly Hibernate.
+
+---
+
+## 🧠 How It Works Behind the Scenes
+
+You define a **repository interface**, like this:
+
+```java
+public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+    List<Employee> findByDepartment(String department);
+}
+```
+
+Spring Data JPA:
+- Automatically implements this interface.
+- Uses Hibernate (or another JPA provider) to execute queries.
+- Injects the repository into your service layer using `@Autowired`.
+
+---
+
+## 🧩 Spring Data JPA vs JPA vs Hibernate
+
+| Layer              | Role                          | Example |
+|--------------------|-------------------------------|---------|
+| **JPA**            | Specification (what to do)    | `@Entity`, `EntityManager` |
+| **Hibernate**      | Implementation (how to do it) | SQL generation, caching |
+| **Spring Data JPA**| Abstraction (do it for me)    | `JpaRepository`, `findByName()` |
+
+---
+
+## 🛒 Real-World Analogy
+
+Imagine you’re building an online store:
+- **JPA** is like the blueprint for how products and orders should be stored.
+- **Hibernate** is the engine that actually stores and retrieves them.
+- **Spring Data JPA** is your smart assistant that says, “Just tell me what you want — I’ll handle the rest.”
+
+---
+*
+💡 What is DI (Dependency Injection)?
+
+**Dependency Injection** is a design pattern where an object’s dependencies (like services, repositories, or utilities) are **provided to it from the outside**, rather than the object creating them itself.
+
+### 🔧 In Java terms:
+Instead of doing this:
+
+```java
+Service service = new Service(); // tightly coupled
+```
+
+You do this:
+
+```java
+@Autowired
+Service service; // Spring injects it for you
+```
+
+---
+
+## 🏠 Real-World Analogy
+
+Imagine you're building a house:
+- Without DI: The house builds its own plumbing, electricity, and furniture.
+- With DI: You hire specialists (plumber, electrician, carpenter) and plug them in — the house just uses them.
+
+**DI = plug-and-play architecture.**
+
+---
+
+## ✅ Why Use DI?
+
+Here’s why DI is a game-changer:
+
+### 1. **Loose Coupling**
+- Classes don’t hardcode their dependencies.
+- You can swap implementations easily (e.g., mock vs real service).
+
+### 2. **Easier Testing**
+- You can inject mock objects for unit testing.
+- No need to spin up the whole app.
+
+### 3. **Better Maintainability**
+- Changes in one class don’t ripple through the whole system.
+- Encourages clean, modular code.
+
+### 4. **Reusability**
+- Components can be reused in different contexts with different dependencies.
+
+### 5. **Inversion of Control (IoC)**
+- Objects don’t control how their dependencies are created — the framework (like Spring) does.
+
+---
+
+## 🧠 In Spring Framework
+
+Spring uses **IoC containers** to manage DI. You just annotate your classes with:
+
+- `@Component`, `@Service`, `@Repository` → to register beans
+- `@Autowired`, `@Inject`, or constructor injection → to inject dependencies
+
+---
+########################
+What is Spring IOC? (Inversion of Control )
+#########################
+-> Spring IOC Container is the core of the Spring Framework.
+-> It manages the lifecycle and Creation of application objects (called beans).
+-> It creates, configures, and wires objects automatically based on configuration
+-> Helps implement Dependency Injection (DI) easily.
+-> Promotes loose coupling because your classes don’t instantiate their dependencies directly.
+
+##################################
+Bean life cycle
+#####################################
+
+Bean is Created---->Dependencies Injected (@Autowired)----->Execution(Bean is use by the application)------>Destruction of the bean
+####################
+Junit
+#####################
+-> We performe testing at the code level. This called as Unit / Whitebox testing
+-> When we create Spring boot project by default we will get Junit library
+
+Annotations in Junit
+--------------------
+a. @Test:
+-> Will run a method as a test case and report pass or fail
+-> If we have more than one @Test method in same class then we can run that in sequence
+What is repository layer in spring boot?
+##############################################
+
+-> The Repository Layer provides utility methods,
+-> Using this utility method we can perform database CRUD Operations
+-> Example of some utility methods save(), findById(), delete(), etc.
+
+
+## 🏭 What is `SessionFactory` in Hibernate?
+
+**SessionFactory** is the central factory class in Hibernate used to create `Session` objects, which are lightweight and short-lived. It’s designed to be created once and reused throughout the application.
+
+### 🔧 Key Points:
+- **Heavyweight**: It’s expensive to create, so it’s typically initialized once at startup.
+- **Thread-safe**: Can be shared across threads.
+- **Configuration-based**: Built using Hibernate configuration (XML or annotations).
+- **Creates Sessions**: Each `Session` represents a single unit of work with the database.
+
+### 🧠 Real-world analogy:
+Think of `SessionFactory` as a **car manufacturing plant**. It’s big, complex, and built once. Each `Session` is like a **car** — lightweight, used for a specific trip (database operation), and then discarded.
+
+### 🔄 In Spring Boot:
+You often don’t interact with `SessionFactory` directly. Spring manages it behind the scenes using `LocalSessionFactoryBean` or via JPA’s `EntityManager` abstraction.
+
+---
+
+## 📦 What is `Optional` in Java?
+
+**Optional** is a class introduced in **Java 8** to represent a value that may or may not be present — a safer alternative to using `null`.
+
+### 🔧 Key Features:
+- **Avoids NullPointerException**: You don’t need to check for `null` manually.
+- **Provides methods** like:
+  - `isPresent()` — checks if a value exists
+  - `ifPresent()` — executes code if value is present
+  - `orElse()` — provides a default value
+  - `map()` — transforms the value if present
+
+### 🧠 Real-world analogy:
+Imagine a **gift box**:
+- If the box has a gift → you open and use it.
+- If it’s empty → you don’t panic, you just move on.
+
+**Optional = a safe gift box for your data**.
+JPQL (Java Persistence Query Language) in Hibernate
+#####################################################
+
+JPQL stands for Java Persistence Query Language. It is similar to SQL, but:
+-> It works with Java entity objects, not directly with database tables.
+-> It uses entity names and field/property names, not table or column names.
+EXAMPLE *******************#############
+@Query("select e from Employee e where e.emailId=:x")
+	Optional<Employee> searchByEmail(@Param("x") String email);
+	
+	@Query("Select e from Employee e where e.mobile=:m")
+	Optional<Employee> searchByMobile(@Param("m") String mobile);
+	
+	@Query("select e from Employee e where e.emailId=:x and e.mobile=:m")
+	Optional<Employee> searchByEmailAndMobile( String email,@Param("m") String mobile);
+Native SQl Query
+##########################
+ -> Raw SQL can be written with hibernate
+Add this in repsoitory layer
+--------------------------------
+        @Query(value = "SELECT * FROM employees WHERE email_id = ?1", nativeQuery = true)
+	Optional<Employee> findByEmailUsingSQl(String email);
+	
+	@Query(value = "SELECT * FROM employees WHERE mobile = ?1", nativeQuery = true)
+	Optional<Employee> findByMobileUsingSQl(String mobile);
+	
+	@Query(value = "SELECT * FROM employees WHERE email_id = ?1 and mobile = ?2", nativeQuery = true)
+	Optional<Employee> findByEmailandMobileUsingSQl(String email, String mobile);
+ ####################   
+@GeneratedValue(strategy = GenerationType.IDENTITY) by which we can seralized id by counting it is auto updated
+############################
+
+
