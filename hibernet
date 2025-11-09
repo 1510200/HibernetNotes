@@ -550,5 +550,237 @@ public class OrderService {
 - Lazy loading outside transaction scope can cause `LazyInitializationException`.
 
 ---
+-> A Hibernate session is kept open for the entire method.
+-> When you access post.getComments(), Hibernate can safely go to the DB and fetch the comments on demand.
+-> This works perfectly with lazy loading.
+
+Note:
+-----------
+
+| Annotation        | Definition                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `@Entity`         | Declares the class as a JPA entity. It will be mapped to a table in the database.                                        |
+| `@Id`             | Marks the field as the **primary key** of the entity.                                                                    |
+| `@GeneratedValue` | Specifies how the primary key should be generated (e.g., auto-increment).                                                |
+| `@Table`          | Specifies the table name in the database for this entity.                                                                |
+| `@Column`         | Used to define column details like name, length, nullable, and uniqueness.                                               |
+| `@OneToMany`      | Specifies a one-to-many relationship between two entities (e.g., one post has many comments).                            |
+| `@ManyToOne`      | Specifies a many-to-one relationship (e.g., many comments belong to one post).                                           |
+| `@OneToOne`       | Maps a one-to-one relationship between two entities (e.g., one person has one KYC).                                      |
+| `@ManyToMany`     | Specifies a many-to-many relationship (e.g., student ↔ courses).                                                         |
+| `@JoinColumn`     | Defines the foreign key column in the child table that maps to the parent table.                                         |
+| `@Query`          | Allows writing custom JPQL or native SQL queries inside repository methods.                                              |
+| `@Transactional`  | Manages the database transaction for the method or class. Automatically commits on success and rolls back on exceptions. |
+
+#################################################################################################################################################
+### 🔗 Unidirectional Mapping
+
+**Definition:** Only one entity knows about the relationship.
+
+#### Example: One-to-One (Unidirectional)
+```java
+@Entity
+public class Person {
+    @Id
+    private Long id;
+
+    @OneToOne
+    private Passport passport;
+}
+```
+- `Person` knows about `Passport`, but `Passport` has no reference back to `Person`.
+- Common for simpler relationships or when reverse navigation isn't needed.
+
+#### Characteristics:
+- Easier to implement and maintain.
+- Less flexible for querying from the inverse side.
+- Suitable for read-only or write-once relationships.
+
+---
+
+### 🔁 Bidirectional Mapping
+
+**Definition:** Both entities are aware of the relationship.
+
+#### Example: One-to-One (Bidirectional)
+```java
+@Entity
+public class Person {
+    @Id
+    private Long id;
+
+    @OneToOne(mappedBy = "person")
+    private Passport passport;
+}
+
+@Entity
+public class Passport {
+    @Id
+    private Long id;
+
+    @OneToOne
+    @JoinColumn(name = "person_id")
+    private Person person;
+}
+```
+- `Person` and `Passport` reference each other.
+- `mappedBy` indicates the owning side (the side that manages the foreign key).
+
+#### Characteristics:
+- More powerful for querying and navigation.
+- Requires careful handling of cascading and synchronization.
+- Ideal for complex domain models.
+
+---
+
+### 🧠 Key Differences
+
+| Feature              | Unidirectional                          | Bidirectional                            |
+|----------------------|------------------------------------------|-------------------------------------------|
+| Navigation           | One-way                                 | Two-way                                   |
+| Query flexibility    | Limited                                 | Enhanced                                  |
+| Complexity           | Simpler                                 | More complex                              |
+| Use case             | Simple relationships                    | Rich domain models                        |
+| Foreign key control  | Owning side only                        | Must define `mappedBy` on inverse side    |
+
+
+---
+
+## 🔍 What Is Hibernate Cache?
+
+Hibernate Cache is an **in-memory data store** that helps reduce the number of database hits by storing frequently accessed data temporarily in RAM. It's a performance booster, especially in read-heavy applications.
+
+### ⚡ Benefits:
+- **Avoids repetitive SQL queries**: Once fetched, data is reused.
+- **Reduces latency**: Faster access from memory than DB.
+- **Minimizes DB load**: Fewer queries = less strain on DB.
+
+---
+
+## 🥇 First-Level Cache (L1)
+
+### ✅ Always Enabled
+- **Scope:** Per Hibernate `Session`
+- **Lifetime:** Active only during the session
+- **Storage:** Inside the session object
+
+### 🔄 Behavior:
+- When you call `session.get()` or `session.find()`, Hibernate first checks the L1 cache.
+- If the entity is already loaded in the session, it returns from cache.
+- Otherwise, it queries the DB and stores the result in L1 cache.
+
+### 🧪 Example:
+```java
+Session session = sessionFactory.openSession();
+User user1 = session.get(User.class, 1L); // Hits DB
+User user2 = session.get(User.class, 1L); // From cache
+```
+
+### 🧼 Eviction:
+- Automatically cleared when session is closed.
+- Manually via:
+  ```java
+  session.evict(user1); // removes specific entity
+  session.clear();      // clears entire cache
+  ```
+
+### 🧠 Analogy:
+Think of L1 cache as your **browser tab**—once you load a page, it stays cached until you close the tab.
+
+---
+
+## 🥈 Second-Level Cache (L2)
+
+### 🛠 Optional & Configurable
+- **Scope:** Across multiple sessions
+- **Lifetime:** Tied to `SessionFactory`
+- **Storage:** External cache provider (Ehcache, Redis, etc.)
+
+### 🔄 Behavior:
+- When an entity is loaded, it’s stored in L2 cache.
+- Future sessions can retrieve it without hitting the DB.
+
+### 🧪 Example:
+```java
+// User A logs in
+Session sessionA = sessionFactory.openSession();
+User userA = sessionA.get(User.class, 1L); // Hits DB → stores in L2
+
+// User B logs in
+Session sessionB = sessionFactory.openSession();
+User userB = sessionB.get(User.class, 1L); // Served from L2 cache
+```
+
+### 🔧 Configuration:
+1. **Enable in `hibernate.cfg.xml` or `application.properties`:**
+   ```properties
+   hibernate.cache.use_second_level_cache=true
+   hibernate.cache.region.factory_class=org.hibernate.cache.ehcache.EhCacheRegionFactory
+   ```
+
+2. **Annotate Entity:**
+   ```java
+   @Entity
+   @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+   public class User { ... }
+   ```
+
+3. **Configure Provider (e.g., `ehcache.xml`)**
+
+---
+
+## 🧠 Cache Providers
+
+| Provider     | Description                              |
+|--------------|------------------------------------------|
+| **Ehcache**  | Popular, easy to configure, file-based   |
+| **Caffeine** | High-performance, Java 8+                |
+| **Infinispan** | Distributed, scalable, JBoss-backed     |
+| **Redis**    | Networked, fast, supports clustering     |
+
+---
+
+## 🧮 Cache Concurrency Strategies
+
+| Strategy                  | Use Case                                |
+|---------------------------|------------------------------------------|
+| `READ_ONLY`               | Immutable data (e.g., countries)         |
+| `NONSTRICT_READ_WRITE`   | Rare updates, eventual consistency       |
+| `READ_WRITE`             | Frequent updates, strict consistency     |
+| `TRANSACTIONAL`          | Full ACID compliance (JTA required)      |
+
+---
+
+## 🔍 Query Cache (Optional)
+
+- Caches **HQL/JPQL result sets**
+- Must be explicitly enabled:
+  ```properties
+  hibernate.cache.use_query_cache=true
+  ```
+- Mark queries as cacheable:
+  ```java
+  Query query = session.createQuery("FROM User");
+  query.setCacheable(true);
+  ```
+
+---
+
+## ⚠️ Best Practices
+
+- **Avoid caching volatile data** (e.g., sessions, tokens)
+- **Use `@Cacheable` only on entities that benefit from reuse**
+- **Monitor cache stats** (hit/miss ratio)
+- **Evict stale data** when updates occur outside Hibernate
+
+---
+
+## 🧠 Real-World Analogy
+
+- **L1 Cache** = Your **desk drawer**: quick access during your work session.
+- **L2 Cache** = **Shared filing cabinet**: accessible to all employees (sessions), but needs coordination.
+
+
+
 
 
