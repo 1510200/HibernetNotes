@@ -778,7 +778,7 @@ User userB = sessionB.get(User.class, 1L); // Served from L2 cache
 ## 🧠 Real-World Analogy
 
 - **L1 Cache** = Your **desk drawer**: quick access during your work session.
-- **L2 Cache** = **Shared filing cabinet**: accessible to all employees (sessions), but needs coordination.
+- **L2 Cache** = **Shared filing cabinet**: accessible to all employees (sessions), but needs coordination...
 
 
 
